@@ -11,8 +11,8 @@ app = Flask(__name__)
 app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 mongo = PyMongo(app)
 
-# Gunakan database sample_mflix dan collection movies
-movies_collection = mongo.cx["sample_mflix"]["movies"]
+# Gunakan database sample_mflix dan collection movie
+movies_collection = mongo.cx["sample_mflix"]["movie"]
 
 @app.route('/')
 def index():
@@ -61,12 +61,16 @@ def update_movie(id):
         update_fields["year"] = int(update_fields["year"])
     movies_collection.update_one({"_id": ObjectId(id)}, {"$set": update_fields})
     movie = movies_collection.find_one({"_id": ObjectId(id)}, {"title": 1, "year": 1, "genres": 1, "plot": 1})
+    if not movie:
+        return jsonify({"error": "Movie not found"}), 404
     movie["_id"] = str(movie["_id"])
     return jsonify(movie)
 
 @app.route('/api/movies/<id>', methods=['DELETE'])
 def delete_movie(id):
-    movies_collection.delete_one({"_id": ObjectId(id)})
+    result = movies_collection.delete_one({"_id": ObjectId(id)})
+    if result.deleted_count == 0:
+        return jsonify({"error": "Movie not found"}), 404
     return jsonify({"result": "success"})
 
 if __name__ == '__main__':
