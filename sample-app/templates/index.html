@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Flask MongoDB</title>
+</head>
+<body>
+    <h1>Data Warga</h1>
+    <form action="/add" method="post">
+        <input type="text" name="nama" placeholder="Nama" required>
+        <input type="text" name="no_rumah" placeholder="No Rumah" required>
+        <input type="text" name="no_wa" placeholder="No WA" required>
+        <button type="submit">Tambah</button>
+    </form>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>Nama</th>
+            <th>No Rumah</th>
+            <th>No WA</th>
+            <th>Aksi</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <form action="/update/{{ item._id }}" method="post">
+                <td><input type="text" name="nama" value="{{ item.nama }}" required></td>
+                <td><input type="text" name="no_rumah" value="{{ item.no_rumah }}" required></td>
+                <td><input type="text" name="no_wa" value="{{ item.no_wa }}" required></td>
+                <td>
+                    <button type="submit">Update</button>
+            </form>
+            <form action="/delete/{{ item._id }}" method="post" style="display:inline;">
+                <button type="submit" onclick="return confirm('Yakin hapus?')">Hapus</button>
+            </form>
+                </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html> 

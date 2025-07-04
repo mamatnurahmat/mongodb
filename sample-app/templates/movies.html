@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Movies - sample_mflix</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <style>
+        td.editable {
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container">
+        <h1 class="mb-4">CRUD Movies (sample_mflix.movies)</h1>
+        <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#createModal">Tambah Movie</button>
+        <table id="moviesTable" class="display table table-bordered" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Year</th>
+                    <th>Genres</th>
+                    <th>Plot</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Modal Create -->
+    <div class="modal fade" id="createModal" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createModalLabel">Tambah Movie</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="createForm">
+              <div class="form-group">
+                <label>Title</label>
+                <input type="text" class="form-control" name="title" required>
+              </div>
+              <div class="form-group">
+                <label>Year</label>
+                <input type="number" class="form-control" name="year" required>
+              </div>
+              <div class="form-group">
+                <label>Genres (pisahkan dengan koma)</label>
+                <input type="text" class="form-control" name="genres">
+              </div>
+              <div class="form-group">
+                <label>Plot</label>
+                <textarea class="form-control" name="plot"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Simpan</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    let table;
+    $(document).ready(function() {
+        table = $('#moviesTable').DataTable({
+            ajax: {
+                url: '/api/movies',
+                dataSrc: ''
+            },
+            columns: [
+                { data: 'title', className: 'editable', name: 'title' },
+                { data: 'year', className: 'editable', name: 'year' },
+                { data: 'genres', className: 'editable', name: 'genres', render: function(data) { return data ? data.join(', ') : '' } },
+                { data: 'plot', className: 'editable', name: 'plot' },
+                { data: null, orderable: false, render: function(data, type, row) {
+                    return `<button class="btn btn-danger btn-sm delete-btn" data-id="${row._id}">Delete</button>`;
+                }}
+            ]
+        });
+
+        // Inline edit
+        $('#moviesTable tbody').on('click', 'td.editable', function() {
+            let cell = table.cell(this);
+            let rowData = table.row(this).data();
+            let field = table.column(this).dataSrc();
+            let oldValue = cell.data();
+            let inputType = (field === 'year') ? 'number' : 'text';
+            if (field === 'genres') {
+                oldValue = rowData.genres ? rowData.genres.join(', ') : '';
+            }
+            $(this).html(`<input type="${inputType}" class="form-control form-control-sm" value="${oldValue}">`);
+            let input = $(this).find('input');
+            input.focus();
+            input.on('blur keydown', function(e) {
+                if (e.type === 'blur' || (e.type === 'keydown' && e.key === 'Enter')) {
+                    let newValue = input.val();
+                    if (field === 'genres') {
+                        newValue = newValue.split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                    if (field === 'year') {
+                        newValue = parseInt(newValue) || 0;
+                    }
+                    if (newValue !== oldValue) {
+                        let updateData = {};
+                        updateData[field] = newValue;
+                        $.ajax({
+                            url: `/api/movies/${rowData._id}`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(updateData),
+                            success: function() { table.ajax.reload(null, false); },
+                            error: function(xhr) { alert(xhr.responseJSON?.error || 'Update gagal'); table.ajax.reload(null, false); }
+                        });
+                    } else {
+                        cell.data(oldValue).draw();
+                    }
+                }
+            });
+        });
+
+        // Delete
+        $('#moviesTable tbody').on('click', '.delete-btn', function() {
+            if (!confirm('Yakin hapus data ini?')) return;
+            let id = $(this).data('id');
+            $.ajax({
+                url: `/api/movies/${id}`,
+                method: 'DELETE',
+                success: function() { table.ajax.reload(null, false); },
+                error: function() { alert('Gagal hapus'); }
+            });
+        });
+
+        // Create
+        $('#createForm').submit(function(e) {
+            e.preventDefault();
+            let form = $(this);
+            let data = {
+                title: form.find('[name=title]').val(),
+                year: form.find('[name=year]').val(),
+                genres: form.find('[name=genres]').val().split(',').map(s => s.trim()).filter(Boolean),
+                plot: form.find('[name=plot]').val()
+            };
+            $.ajax({
+                url: '/api/movies',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function() {
+                    $('#createModal').modal('hide');
+                    form[0].reset();
+                    table.ajax.reload(null, false);
+                },
+                error: function(xhr) { alert(xhr.responseJSON?.error || 'Gagal tambah data'); }
+            });
+        });
+    });
+    </script>
+</body>
+</html> 
