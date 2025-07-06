@@ -1,0 +1,87 @@
+{
+    "$id": "https://www.krakend.io/schema/v3.json",
+    "version": 3,
+    "name": "paysaas Api Gateway",
+    "port": 8888,
+    "cache_ttl": "300s",
+    "timeout": "9s",
+    "extra_config": {
+      "security/http": {
+        "allowed_hosts": [],
+        "ssl_proxy_headers": {
+          "X-Forwarded-Proto": "https"
+        },
+        "host_proxy_headers": [
+          "X-Forwarded-Hosts"
+        ],
+        "frame_deny": true,
+        "referrer_policy": "same-origin",
+        "custom_frame_options_value": "DENY",
+        "content_type_nosniff": true,
+        "browser_xss_filter": true,
+        "content_security_policy": ""
+      },
+      "security/cors": {
+        "allow_origins": [
+          "*"
+        ],
+        "allow_methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "PATCH"
+        ],
+        "allow_headers": [
+          "Origin",
+          "Authorization",
+          "Content-Type",
+          "Accept",
+          "X-Auth-Token",
+          "X-XSRF-TOKEN"
+        ],
+        "expose_headers": [
+          "Content-Type"
+        ],
+        "max_age": "12h"
+      }
+    },
+    "endpoints": [
+      {
+        "endpoint": "/v1/movie",
+        "method": "GET",
+        "output_encoding": "no-op",
+        "concurrent_calls": 1,
+        "input_headers": [
+          "Accept",
+          "API-Key",
+          "Content-Type",
+          "Signature",
+          "Authorization"
+        ],
+        "extra_config": {
+          "decoder": {
+            "name": "json-array"
+          },
+          "qos/http-cache": {
+            "shared": false,
+            "max_items": 100,
+            "max_size": 128000000
+          }
+        },
+        "backend": [
+          {
+            "url_pattern": "/v1/movie",
+            "encoding": "no-op",
+            "sd": "static",
+            "host": [
+              "http://192.168.11.12:8000"
+            ],
+            "disable_host_sanitize": false
+          }
+        ]
+      }
+    ],
+    "output_encoding": "no-op"
+  }
+  
